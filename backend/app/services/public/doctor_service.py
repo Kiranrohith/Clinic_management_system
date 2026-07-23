@@ -1,11 +1,17 @@
 import logging
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.repositories.admin.clinic_repository import AdminClinicRepository
 from app.repositories.public.doctor_repository import PublicDoctorRepository
-from app.schemas.public.doctor import PublicDoctorResponse, PublicSpecializationResponse, PublicAvailabilityResponse
+from app.schemas.public.doctor import (
+    PublicAvailabilityResponse,
+    PublicClinicSettingsResponse,
+    PublicDoctorResponse,
+    PublicSpecializationResponse,
+)
 from app.services.admin.slot_service import AdminSlotService
 
 logger = logging.getLogger("clinic.public")
@@ -15,6 +21,7 @@ class PublicDoctorService:
     def __init__(self, db: Session):
         self.db = db
         self.repo = PublicDoctorRepository(db)
+        self.clinic_repo = AdminClinicRepository(db)
 
     def list_specializations(self) -> list[PublicSpecializationResponse]:
         rows = self.repo.list_specializations()
@@ -63,9 +70,16 @@ class PublicDoctorService:
         self,
         doctor_user_id: int | None,
         available_date: date | None,
+        include_booked: bool = False,
     ) -> list[PublicAvailabilityResponse]:
+        today = date.today()
+        current_time = datetime.now().time()
         effective_slot_ids = self._effective_slot_ids()
-        rows = self.repo.list_available_rows(doctor_user_id=doctor_user_id, available_date=available_date)
+        rows = self.repo.list_available_rows(
+            doctor_user_id=doctor_user_id,
+            available_date=available_date,
+            include_booked=include_booked,
+        )
         return [
             PublicAvailabilityResponse(
                 availability_id=availability.availability_id,
@@ -79,4 +93,21 @@ class PublicDoctorService:
             )
             for availability, slot, user in rows
             if slot.slot_id in effective_slot_ids
+            and not (
+                availability.available_date == today
+                and slot.slot_start_time <= current_time
+            )
         ]
+
+    def get_clinic_settings(self) -> PublicClinicSettingsResponse | None:
+        settings = self.clinic_repo.get_clinic_settings()
+        if settings is None:
+            return None
+        return PublicClinicSettingsResponse(
+            clinic_name=settings.clinic_name,
+            clinic_phone=settings.clinic_phone,
+            clinic_email=settings.clinic_email,
+            clinic_address=settings.clinic_address,
+            opening_time=settings.opening_time,
+            closing_time=settings.closing_time,
+        )

@@ -2,7 +2,17 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 
-import { listPublicDoctors, submitPublicContactQuery } from "../../api/public";
+import { getPublicClinicSettings, listPublicDoctors, submitPublicContactQuery } from "../../api/public";
+
+function formatClinicTimeRange(openingTime: string, closingTime: string): string {
+  const formatTime = (value: string): string => {
+    const [hours, minutes] = value.split(":");
+    const date = new Date();
+    date.setHours(Number(hours), Number(minutes), 0, 0);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  };
+  return `${formatTime(openingTime)} to ${formatTime(closingTime)}`;
+}
 
 export function PublicHomePage() {
   const [contactForm, setContactForm] = useState({ full_name: "", phone: "", email: "", subject: "", message: "" });
@@ -12,6 +22,17 @@ export function PublicHomePage() {
     queryKey: ["public", "doctors"],
     queryFn: listPublicDoctors
   });
+  const clinicSettingsQuery = useQuery({
+    queryKey: ["public", "clinic-settings"],
+    queryFn: getPublicClinicSettings
+  });
+  const clinicName = clinicSettingsQuery.data?.clinic_name || "CarePoint Clinic";
+  const clinicAddress = clinicSettingsQuery.data?.clinic_address || "12, Health Avenue, City Center";
+  const clinicPhone = clinicSettingsQuery.data?.clinic_phone || "+91 98765 43210";
+  const clinicHours =
+    clinicSettingsQuery.data?.opening_time && clinicSettingsQuery.data?.closing_time
+      ? formatClinicTimeRange(clinicSettingsQuery.data.opening_time, clinicSettingsQuery.data.closing_time)
+      : "08:00 AM to 08:00 PM";
 
   const contactMutation = useMutation({
     mutationFn: () =>
@@ -36,7 +57,7 @@ export function PublicHomePage() {
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">CarePoint Clinic</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">{clinicName}</p>
             <p className="text-sm text-slate-600">Modern outpatient care</p>
           </div>
           <div className="flex items-center gap-2">
@@ -83,15 +104,15 @@ export function PublicHomePage() {
       <section className="mx-auto -mt-6 grid max-w-6xl gap-4 px-4 md:grid-cols-3 md:px-8">
         <article className="rounded-xl border bg-white p-5 shadow-sm">
           <h3 className="font-semibold">Clinic Hours</h3>
-          <p className="mt-2 text-sm text-slate-600">Mon - Sat: 08:00 AM to 08:00 PM</p>
+          <p className="mt-2 text-sm text-slate-600">Mon - Sat: {clinicHours}</p>
         </article>
         <article className="rounded-xl border bg-white p-5 shadow-sm">
           <h3 className="font-semibold">Location</h3>
-          <p className="mt-2 text-sm text-slate-600">12, Health Avenue, City Center</p>
+          <p className="mt-2 text-sm text-slate-600">{clinicAddress}</p>
         </article>
         <article className="rounded-xl border bg-white p-5 shadow-sm">
           <h3 className="font-semibold">Emergency Contact</h3>
-          <p className="mt-2 text-sm text-slate-600">+91 98765 43210</p>
+          <p className="mt-2 text-sm text-slate-600">{clinicPhone}</p>
         </article>
       </section>
 

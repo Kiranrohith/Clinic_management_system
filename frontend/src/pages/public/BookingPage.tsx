@@ -1,11 +1,13 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import {
   bookPublicAppointmentAuthenticated,
+  getPublicClinicSettings,
   getPublicBookingPatientByPhone,
   getPublicDoctor,
+  joinPublicWaitingList,
   listPublicAvailabilitiesByDoctor,
   requestPublicBookingOtp,
   verifyPublicBookingOtp
@@ -33,6 +35,7 @@ function formatTimeLabel(value: string): string {
 }
 
 export function BookingPage() {
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const availabilityId = Number(searchParams.get("availabilityId") ?? "");
   const doctorId = Number(searchParams.get("doctorId") ?? "");
@@ -67,6 +70,7 @@ export function BookingPage() {
     appointment_id: number;
     patient_phone: string;
   } | null>(null);
+  const [recentlyBookedAvailabilityId, setRecentlyBookedAvailabilityId] = useState<number | null>(null);
 
   const doctorQuery = useQuery({
     queryKey: ["public", "doctor", doctorId],
@@ -75,14 +79,22 @@ export function BookingPage() {
   });
   const availabilityQuery = useQuery({
     queryKey: ["public", "doctor-slots", doctorId],
-    queryFn: () => listPublicAvailabilitiesByDoctor(doctorId),
+    queryFn: () => listPublicAvailabilitiesByDoctor(doctorId, undefined, true),
     enabled: Number.isInteger(doctorId) && doctorId > 0
   });
+  const clinicSettingsQuery = useQuery({
+    queryKey: ["public", "clinic-settings"],
+    queryFn: getPublicClinicSettings
+  });
+  const clinicName = clinicSettingsQuery.data?.clinic_name || "CarePoint Clinic";
 
   const selectedSlot = useMemo(
     () => (availabilityQuery.data ?? []).find((slot) => slot.availability_id === availabilityId),
     [availabilityQuery.data, availabilityId]
   );
+  const selectedSlotBooked = selectedSlot
+    ? selectedSlot.slot_status !== "AVAILABLE" || selectedSlot.availability_id === recentlyBookedAvailabilityId
+    : false;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -155,8 +167,28 @@ export function BookingPage() {
         appointment_id: data.appointment_id,
         patient_phone: patientPhone.trim()
       });
+      setRecentlyBookedAvailabilityId(data.availability_id);
+      void queryClient.invalidateQueries({ queryKey: ["public", "doctor-slots", doctorId] });
     },
     onError: (error) => setMessage(error instanceof Error ? error.message : "Failed to book appointment.")
+  });
+  const joinWaitingMutation = useMutation({
+    mutationFn: (payload: {
+      availability_id: number;
+      patient: {
+        full_name: string;
+        phone: string;
+        gender?: "MALE" | "FEMALE" | "OTHER";
+        dob?: string;
+        blood_group?: string;
+        address?: string;
+        emergency_contact?: string;
+      };
+    }) => joinPublicWaitingList(payload),
+    onSuccess: (data) => {
+      setMessage(`You are added to waiting list. Position #${data.position}.`);
+    },
+    onError: (error) => setMessage(error instanceof Error ? error.message : "Failed to join waiting list.")
   });
 
   return (
@@ -196,6 +228,12 @@ export function BookingPage() {
               ? `${selectedSlot.available_date} ${formatTimeLabel(selectedSlot.slot_start_time)} - ${formatTimeLabel(selectedSlot.slot_end_time)}`
               : "Invalid or unavailable slot"}
           </p>
+          {selectedSlot ? (
+            <p className="mt-1">
+              <span className="font-semibold">Status:</span>{" "}
+              {selectedSlot.slot_status === "AVAILABLE" ? "Available" : "Booked (you can join waiting list)"}
+            </p>
+          ) : null}
           {doctorQuery.isError || availabilityQuery.isError ? (
             <p className="mt-2 text-red-600">Unable to load doctor/slot details fully. Please go back and retry.</p>
           ) : null}
@@ -300,9 +338,13 @@ export function BookingPage() {
 
       <section className="mt-5 rounded-2xl border bg-white p-6 shadow-sm">
         <button
-          className="rounded bg-emerald-600 px-5 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          className={`rounded px-5 py-2.5 font-semibold text-white disabled:opacity-60 ${
+            selectedSlotBooked
+              ? "bg-amber-600 hover:bg-amber-700"
+              : "bg-emerald-600 hover:bg-emerald-700"
+          }`}
           type="button"
-          disabled={bookMutation.isPending}
+          disabled={bookMutation.isPending || joinWaitingMutation.isPending}
           onClick={() => {
             if (!sessionToken) {
               setMessage("Please complete OTP authentication first.");
@@ -314,6 +356,41 @@ export function BookingPage() {
             }
             if (!isValidPhoneNumber(patientPhone)) {
               setMessage("Enter a valid patient phone number.");
+              return;
+            }
+
+            if (selectedSlotBooked) {
+              if (existingPatient) {
+                joinWaitingMutation.mutate({
+                  availability_id: selectedSlot.availability_id,
+                  patient: {
+                    full_name: existingPatient.full_name,
+                    phone: existingPatient.phone,
+                    gender: existingPatient.gender ?? undefined,
+                    dob: existingPatient.dob ?? undefined,
+                    blood_group: existingPatient.blood_group ?? undefined,
+                    address: existingPatient.address ?? undefined,
+                    emergency_contact: existingPatient.emergency_contact ?? undefined
+                  }
+                });
+                return;
+              }
+              if (newPatient.full_name.trim().length < 2) {
+                setMessage("Please provide new patient full name.");
+                return;
+              }
+              joinWaitingMutation.mutate({
+                availability_id: selectedSlot.availability_id,
+                patient: {
+                  full_name: newPatient.full_name.trim(),
+                  phone: patientPhone.trim(),
+                  gender: newPatient.gender || undefined,
+                  dob: newPatient.dob || undefined,
+                  blood_group: newPatient.blood_group.trim() || undefined,
+                  address: newPatient.address.trim() || undefined,
+                  emergency_contact: newPatient.emergency_contact.trim() || undefined
+                }
+              });
               return;
             }
 
@@ -347,7 +424,13 @@ export function BookingPage() {
             });
           }}
         >
-          {bookMutation.isPending ? "Booking..." : "Confirm Booking"}
+          {selectedSlotBooked
+            ? joinWaitingMutation.isPending
+              ? "Joining waiting list..."
+              : "Join Waiting List"
+            : bookMutation.isPending
+              ? "Booking..."
+              : "Confirm Booking"}
         </button>
         {message ? <p className="mt-3 text-sm text-slate-700">{message}</p> : null}
         {lastBookedAppointment && selectedSlot ? (
@@ -361,7 +444,7 @@ export function BookingPage() {
                 type="button"
                 onClick={() => {
                   const content = buildBookingConfirmationArtifactContent({
-                    clinicName: "CarePoint Clinic",
+                    clinicName,
                     appointmentId: lastBookedAppointment.appointment_id,
                     patientPhone: lastBookedAppointment.patient_phone,
                     doctorName: doctorQuery.data?.full_name ?? selectedSlot.doctor_name,
@@ -384,7 +467,7 @@ export function BookingPage() {
                 type="button"
                 onClick={() => {
                   const content = buildBookingConfirmationArtifactContent({
-                    clinicName: "CarePoint Clinic",
+                    clinicName,
                     appointmentId: lastBookedAppointment.appointment_id,
                     patientPhone: lastBookedAppointment.patient_phone,
                     doctorName: doctorQuery.data?.full_name ?? selectedSlot.doctor_name,

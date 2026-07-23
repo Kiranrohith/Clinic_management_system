@@ -1,9 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
+import { getPublicClinicSettings } from "../../api/public";
 import { login } from "../../api/auth";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -18,6 +20,20 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { setSession } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const clinicSettingsQuery = useQuery({
+    queryKey: ["public", "clinic-settings"],
+    queryFn: getPublicClinicSettings
+  });
+  const clinicName = clinicSettingsQuery.data?.clinic_name || "CarePoint Clinic";
+  const clinicHours =
+    clinicSettingsQuery.data?.opening_time && clinicSettingsQuery.data?.closing_time
+      ? `${clinicSettingsQuery.data.opening_time} to ${clinicSettingsQuery.data.closing_time}`
+      : "08:00 AM to 08:00 PM";
+  const clinicSupport = [
+    clinicSettingsQuery.data?.clinic_phone || "+91 98765 43210",
+    clinicSettingsQuery.data?.clinic_email || "support@carepointclinic.com"
+  ].join(" • ");
+  const clinicAddress = clinicSettingsQuery.data?.clinic_address || "12 Health Avenue, City Center";
   const {
     register,
     handleSubmit,
@@ -51,7 +67,7 @@ export function LoginPage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-emerald-50 px-4 py-10 md:px-8">
       <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-2xl border bg-white shadow-lg md:grid-cols-[1.1fr_1fr]">
         <div className="bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-700 p-8 text-white md:p-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">CarePoint Clinic</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-100">{clinicName}</p>
           <h1 className="mt-3 text-3xl font-bold leading-tight">Compassion in care. Precision in every appointment.</h1>
           <p className="mt-4 text-sm text-emerald-50">
             Welcome to the clinic management portal. Please sign in with your official credentials to continue.
@@ -59,15 +75,15 @@ export function LoginPage() {
           <div className="mt-8 grid gap-3 text-sm">
             <article className="rounded-lg border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
               <p className="font-semibold">Clinic Timings</p>
-              <p className="text-emerald-50">Mon - Sat • 08:00 AM to 08:00 PM</p>
+              <p className="text-emerald-50">Mon - Sat • {clinicHours}</p>
             </article>
             <article className="rounded-lg border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
               <p className="font-semibold">Support Desk</p>
-              <p className="text-emerald-50">+91 98765 43210 • support@carepointclinic.com</p>
+              <p className="text-emerald-50">{clinicSupport}</p>
             </article>
             <article className="rounded-lg border border-white/25 bg-white/10 p-3 backdrop-blur-sm">
               <p className="font-semibold">Location</p>
-              <p className="text-emerald-50">12 Health Avenue, City Center</p>
+              <p className="text-emerald-50">{clinicAddress}</p>
             </article>
           </div>
         </div>
