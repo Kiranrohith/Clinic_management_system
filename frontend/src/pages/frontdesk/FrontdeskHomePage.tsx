@@ -27,11 +27,13 @@ import {
   type FrontdeskPatientSearchItem,
   type FrontdeskWalkInListItem
 } from "../../api/frontdesk";
+import { getPublicClinicSettings } from "../../api/public";
 import { NotificationPanel } from "../../components/NotificationPanel";
 import { useAuth } from "../../hooks/useAuth";
 
 type FrontdeskTab = "dashboard" | "appointments" | "walkins" | "contacts" | "profile";
 type WalkinStatus = "WAITING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+const GENERAL_MEDICINE_SPECIALIZATION = "general medicine";
 
 type PatientDraft = {
   full_name: string;
@@ -434,7 +436,6 @@ export function FrontdeskHomePage() {
   const [contactStatusFilter, setContactStatusFilter] = useState<"ALL" | ContactQueryStatus>("NEW");
   const [contactDrafts, setContactDrafts] = useState<Record<number, { status: ContactQueryStatus; notes: string }>>({});
   const [appointmentSpecFilter, setAppointmentSpecFilter] = useState("");
-  const [walkinSpecFilter, setWalkinSpecFilter] = useState("");
 
   const dashboardDoctorId = dashboardDoctorFilter === "ALL" ? undefined : Number(dashboardDoctorFilter);
   const appointmentDoctorId = appointmentDoctorFilter === "ALL" ? undefined : Number(appointmentDoctorFilter);
@@ -466,6 +467,10 @@ export function FrontdeskHomePage() {
   const contactQueriesQuery = useQuery({
     queryKey: ["frontdesk", "contact-queries", contactStatusFilter],
     queryFn: () => listFrontdeskContactQueries(contactStatusFilter === "ALL" ? undefined : contactStatusFilter)
+  });
+  const clinicSettingsQuery = useQuery({
+    queryKey: ["public", "clinic-settings"],
+    queryFn: getPublicClinicSettings
   });
   const profileQuery = useQuery({ queryKey: ["frontdesk", "profile"], queryFn: getFrontdeskProfile });
   const appointmentPatientSearchQuery = useQuery({
@@ -585,13 +590,14 @@ export function FrontdeskHomePage() {
 
   const sidebarUserName = profileQuery.data?.full_name ?? user?.full_name ?? "Frontdesk User";
   const sidebarEmail = profileQuery.data?.email ?? user?.email ?? "";
+  const clinicName = clinicSettingsQuery.data?.clinic_name ?? "CarePoint Clinic";
   const doctorOptions = doctorsQuery.data ?? [];
   const allSpecs = Array.from(new Set(doctorOptions.flatMap((d) => d.specializations))).sort();
+  const walkinDoctorOptions = doctorOptions.filter((doctor) =>
+    doctor.specializations.some((specialization) => specialization.trim().toLowerCase() === GENERAL_MEDICINE_SPECIALIZATION)
+  );
   const filteredDoctorsForAppt = appointmentSpecFilter
     ? doctorOptions.filter((d) => d.specializations.includes(appointmentSpecFilter))
-    : doctorOptions;
-  const filteredDoctorsForWalkin = walkinSpecFilter
-    ? doctorOptions.filter((d) => d.specializations.includes(walkinSpecFilter))
     : doctorOptions;
   const selectedAvailability = (availabilitiesQuery.data ?? []).find((item) => item.availability_id === selectedAvailabilityId) ?? null;
 
@@ -621,12 +627,12 @@ export function FrontdeskHomePage() {
     setWalkinPatientForm(emptyPatientDraft());
     setWalkinTokenDate(today);
     setWalkinNotes("");
-    setWalkinSpecFilter("");
+    const dashboardDoctorUserId = dashboardDoctorFilter === "ALL" ? null : Number(dashboardDoctorFilter);
     setWalkinDoctorUserId(
-      dashboardDoctorFilter !== "ALL"
-        ? dashboardDoctorFilter
-        : doctorOptions[0]?.doctor_user_id
-          ? String(doctorOptions[0].doctor_user_id)
+      dashboardDoctorUserId && walkinDoctorOptions.some((doctor) => doctor.doctor_user_id === dashboardDoctorUserId)
+        ? String(dashboardDoctorUserId)
+        : walkinDoctorOptions[0]?.doctor_user_id
+          ? String(walkinDoctorOptions[0].doctor_user_id)
           : ""
     );
   };
@@ -707,7 +713,7 @@ export function FrontdeskHomePage() {
       <div className="mx-auto grid min-h-screen max-w-[1600px] md:grid-cols-[18rem_1fr]">
         <aside className="flex flex-col gap-6 bg-gradient-to-b from-slate-950 via-slate-900 to-blue-950 px-5 py-6">
           <div className="rounded-2xl bg-white/10 p-4 text-white">
-            <p className="text-xs uppercase tracking-[0.24em] text-blue-200">CarePoint Clinic</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-blue-200">{clinicName}</p>
             <h1 className="mt-2 text-lg font-semibold">Front Desk</h1>
             <p className="mt-1 text-sm text-slate-300">Appointments, tokens, contact queries, and patient coordination.</p>
           </div>
@@ -808,7 +814,7 @@ export function FrontdeskHomePage() {
                         onChange={(event) => setDashboardDoctorFilter(event.target.value)}
                       >
                         <option value="ALL">All Doctors</option>
-                        {doctorOptions.map((doctor) => (
+                        {walkinDoctorOptions.map((doctor) => (
                           <option key={doctor.doctor_user_id} value={doctor.doctor_user_id}>
                             {doctor.doctor_name}
                           </option>
@@ -1296,23 +1302,7 @@ export function FrontdeskHomePage() {
                   </div>
                   <div className="grid gap-4 px-5 py-5 lg:grid-cols-2">
                     <label className="text-sm font-medium text-slate-600">
-                      Specialization
-                      <select
-                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"
-                        value={walkinSpecFilter}
-                        onChange={(event) => {
-                          setWalkinSpecFilter(event.target.value);
-                          setWalkinDoctorUserId("");
-                        }}
-                      >
-                        <option value="">All Specializations</option>
-                        {allSpecs.map((spec) => (
-                          <option key={spec} value={spec}>{spec}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="text-sm font-medium text-slate-600">
-                      Select Doctor
+                      Select Doctor (General Medicine)
                       {doctorsQuery.isLoading && <span className="ml-2 text-xs text-slate-400">Loading…</span>}
                       <select
                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3"
@@ -1320,7 +1310,7 @@ export function FrontdeskHomePage() {
                         onChange={(event) => setWalkinDoctorUserId(event.target.value)}
                       >
                         <option value="">Select doctor</option>
-                        {filteredDoctorsForWalkin.map((doctor) => (
+                        {walkinDoctorOptions.map((doctor) => (
                           <option key={doctor.doctor_user_id} value={doctor.doctor_user_id}>
                             {doctor.doctor_name}
                           </option>
@@ -1336,6 +1326,11 @@ export function FrontdeskHomePage() {
                         onChange={(event) => setWalkinTokenDate(event.target.value)}
                       />
                     </label>
+                    {walkinDoctorOptions.length === 0 && !doctorsQuery.isLoading ? (
+                      <p className="text-sm text-slate-500 lg:col-span-2">
+                        No General Medicine doctor is available for walk-in token creation.
+                      </p>
+                    ) : null}
                   </div>
                 </section>
 

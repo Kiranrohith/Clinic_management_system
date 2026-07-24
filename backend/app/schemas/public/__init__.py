@@ -2,6 +2,7 @@ from app.schemas.public.doctor import (
     PublicSpecializationResponse,
     PublicDoctorResponse,
     PublicAvailabilityResponse,
+    PublicClinicSettingsResponse,
 )
 from app.schemas.public.booking import (
     PublicBookingPatientInput,
@@ -30,6 +31,7 @@ __all__ = [
     "PublicSpecializationResponse",
     "PublicDoctorResponse",
     "PublicAvailabilityResponse",
+    "PublicClinicSettingsResponse",
     "PublicBookingPatientInput",
     "PublicBookAppointmentRequest",
     "PublicAuthenticatedBookAppointmentRequest",

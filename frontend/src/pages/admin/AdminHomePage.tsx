@@ -434,7 +434,9 @@ export function AdminHomePage() {
         <main className="flex flex-col overflow-y-auto">
           <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/80 px-8 py-4 backdrop-blur">
             <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-indigo-500">CarePoint Clinic</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-indigo-500">
+                {clinicSettingsQuery.data?.clinic_name || "CarePoint Clinic"}
+              </p>
               <h1 className="text-xl font-bold text-slate-900">
                 {activeTab === "dashboard" && "Dashboard"}
                 {activeTab === "accounts" && "Manage Accounts"}

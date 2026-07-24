@@ -1,6 +1,6 @@
 from datetime import date, time
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from app.models.enums import Gender
 
@@ -30,3 +30,12 @@ class PublicAvailabilityResponse(BaseModel):
     slot_start_time: time
     slot_end_time: time
     slot_status: str
+
+
+class PublicClinicSettingsResponse(BaseModel):
+    clinic_name: str
+    clinic_phone: str | None
+    clinic_email: EmailStr | None
+    clinic_address: str | None
+    opening_time: time
+    closing_time: time

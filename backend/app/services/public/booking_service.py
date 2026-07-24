@@ -272,6 +272,20 @@ class PublicBookingService:
             template_key="APPOINTMENT_CANCELLED",
             variables={"appointment_id": str(appointment.appointment_id), "reason": payload.cancellation_reason.strip()},
         )
+        if next_waiting is not None:
+            self.notification_service.create_for_roles(
+                role_names=(ROLE_FRONTDESK,),
+                notification_type=NotificationType.WAITING_LIST_AVAILABLE,
+                title="Waiting list patient notified",
+                message=f"Waiting entry #{next_waiting.waiting_id} has been notified for availability #{next_waiting.availability_id}.",
+                metadata={"waiting_id": next_waiting.waiting_id, "availability_id": next_waiting.availability_id},
+            )
+            logger.info(
+                "Waiting list entry notified waiting_id=%s availability_id=%s after cancellation appointment_id=%s",
+                next_waiting.waiting_id,
+                next_waiting.availability_id,
+                appointment.appointment_id,
+            )
         return PublicBookAppointmentResponse(
             appointment_id=appointment.appointment_id,
             patient_id=appointment.patient_id,
@@ -354,6 +368,20 @@ class PublicBookingService:
             template_key="APPOINTMENT_RESCHEDULED",
             variables={"appointment_id": str(appointment.appointment_id), "new_date": str(new_availability.available_date)},
         )
+        if next_waiting is not None:
+            self.notification_service.create_for_roles(
+                role_names=(ROLE_FRONTDESK,),
+                notification_type=NotificationType.WAITING_LIST_AVAILABLE,
+                title="Waiting list patient notified",
+                message=f"Waiting entry #{next_waiting.waiting_id} has been notified for availability #{next_waiting.availability_id}.",
+                metadata={"waiting_id": next_waiting.waiting_id, "availability_id": next_waiting.availability_id},
+            )
+            logger.info(
+                "Waiting list entry notified waiting_id=%s availability_id=%s after reschedule appointment_id=%s",
+                next_waiting.waiting_id,
+                next_waiting.availability_id,
+                appointment.appointment_id,
+            )
         return PublicBookAppointmentResponse(
             appointment_id=appointment.appointment_id,
             patient_id=appointment.patient_id,
@@ -385,6 +413,16 @@ class PublicBookingService:
                     address=patient_input.address,
                     emergency_contact=patient_input.emergency_contact,
                     now=now,
+                )
+            existing_appointment = self.repo.get_appointment_by_availability_id(availability.availability_id)
+            if (
+                existing_appointment is not None
+                and existing_appointment.appointment_status == AppointmentStatus.BOOKED
+                and existing_appointment.patient_id == patient.patient_id
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Booked patient cannot join waiting list for the same slot.",
                 )
             existing = self.repo.get_waiting_entry(patient_id=patient.patient_id, availability_id=availability.availability_id)
             if existing is not None:
