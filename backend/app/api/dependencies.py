@@ -10,7 +10,7 @@ from app.models.enums import UserStatus
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 
 def _get_user_from_token(token: str, db: Session) -> User:

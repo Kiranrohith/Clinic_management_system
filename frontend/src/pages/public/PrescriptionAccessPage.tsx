@@ -1,8 +1,13 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { requestPublicPrescriptionOtp, verifyPublicPrescriptionOtp, type PublicPrescriptionItem } from "../../api/public";
+import {
+  getPublicClinicSettings,
+  requestPublicPrescriptionOtp,
+  verifyPublicPrescriptionOtp,
+  type PublicPrescriptionItem
+} from "../../api/public";
 import { isValidOtpCode, isValidPhoneNumber } from "../../utils/validators";
 import {
   buildPrescriptionArtifactContent,
@@ -18,6 +23,11 @@ export function PrescriptionAccessPage() {
   const [otpPreview, setOtpPreview] = useState<string | null>(null);
   const [records, setRecords] = useState<PublicPrescriptionItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const clinicSettingsQuery = useQuery({
+    queryKey: ["public", "clinic-settings"],
+    queryFn: getPublicClinicSettings
+  });
+  const clinicName = clinicSettingsQuery.data?.clinic_name || "CarePoint Clinic";
 
   const requestOtpMutation = useMutation({
     mutationFn: () => requestPublicPrescriptionOtp(phone.trim()),
@@ -129,7 +139,7 @@ export function PrescriptionAccessPage() {
                     type="button"
                     onClick={() => {
                       const content = buildPrescriptionArtifactContent({
-                        clinicName: "CarePoint Clinic",
+                        clinicName,
                         prescriptionId: item.prescription_id,
                         appointmentId: item.appointment_id,
                         doctorName: item.doctor_name,
@@ -152,7 +162,7 @@ export function PrescriptionAccessPage() {
                     type="button"
                     onClick={() => {
                       const content = buildPrescriptionArtifactContent({
-                        clinicName: "CarePoint Clinic",
+                        clinicName,
                         prescriptionId: item.prescription_id,
                         appointmentId: item.appointment_id,
                         doctorName: item.doctor_name,

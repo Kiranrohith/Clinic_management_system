@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import {
   cancelPublicAppointment,
+  getPublicClinicSettings,
   listPublicAvailabilitiesByDoctor,
   listPublicBookingHistory,
   requestPublicBookingOtp,
@@ -55,6 +56,11 @@ export function BookingsHistoryPage() {
   const [sessionToken, setSessionToken] = useState<string | null>(() => getPublicBookingSessionToken());
   const [cancelReason, setCancelReason] = useState<Record<number, string>>({});
   const [rescheduleAvailability, setRescheduleAvailability] = useState<Record<number, string>>({});
+  const clinicSettingsQuery = useQuery({
+    queryKey: ["public", "clinic-settings"],
+    queryFn: getPublicClinicSettings
+  });
+  const clinicName = clinicSettingsQuery.data?.clinic_name || "CarePoint Clinic";
 
   const historyQuery = useQuery({
     queryKey: ["public", "booking-history", sessionToken],
@@ -206,7 +212,7 @@ export function BookingsHistoryPage() {
                   type="button"
                   onClick={() => {
                     const content = buildBookingConfirmationArtifactContent({
-                      clinicName: "CarePoint Clinic",
+                      clinicName,
                       appointmentId: item.appointment_id,
                       patientPhone: item.patient_phone,
                       doctorName: item.doctor_name,
@@ -226,7 +232,7 @@ export function BookingsHistoryPage() {
                   type="button"
                   onClick={() => {
                     const content = buildBookingConfirmationArtifactContent({
-                      clinicName: "CarePoint Clinic",
+                      clinicName,
                       appointmentId: item.appointment_id,
                       patientPhone: item.patient_phone,
                       doctorName: item.doctor_name,

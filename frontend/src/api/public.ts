@@ -27,6 +27,15 @@ export type PublicSpecialization = {
   specialization_name: string;
 };
 
+export type PublicClinicSettings = {
+  clinic_name: string;
+  clinic_phone: string | null;
+  clinic_email: string | null;
+  clinic_address: string | null;
+  opening_time: string;
+  closing_time: string;
+};
+
 export type PublicBookingPatientInput = {
   full_name: string;
   phone: string;
@@ -48,6 +57,14 @@ export type PublicBookAppointmentResponse = {
   availability_id: number;
   appointment_status: string;
   booking_source: string;
+};
+
+export type PublicJoinWaitingListResponse = {
+  waiting_id: number;
+  patient_id: number;
+  availability_id: number;
+  position: number;
+  status: string;
 };
 
 export type PublicContactQueryCreateRequest = {
@@ -108,9 +125,9 @@ export type PublicAppointmentHistoryItem = {
   appointment_id: number;
   patient_id: number;
   patient_name: string;
-  patient_phone: string;
+  patient_phone: string; 
   doctor_user_id: number;
-  doctor_name: string;
+  doctor_name: string; 
   availability_id: number;
   available_date: string;
   slot_start_time: string;
@@ -135,15 +152,37 @@ export function listPublicSpecializations(): Promise<PublicSpecialization[]> {
   return request<PublicSpecialization[]>("/api/v1/public/specializations");
 }
 
+export async function getPublicClinicSettings(): Promise<PublicClinicSettings | null> {
+  const data = await request<Record<string, unknown>>("/api/v1/public/clinic-settings");
+  if (!("clinic_name" in data)) {
+    return null;
+  }
+  return {
+    clinic_name: String(data.clinic_name ?? ""),
+    clinic_phone: typeof data.clinic_phone === "string" ? data.clinic_phone : null,
+    clinic_email: typeof data.clinic_email === "string" ? data.clinic_email : null,
+    clinic_address: typeof data.clinic_address === "string" ? data.clinic_address : null,
+    opening_time: String(data.opening_time ?? ""),
+    closing_time: String(data.closing_time ?? ""),
+  };
+}
+
 export function listPublicAvailabilities(): Promise<PublicAvailability[]> {
   return request<PublicAvailability[]>("/api/v1/public/availabilities");
 }
 
-export function listPublicAvailabilitiesByDoctor(doctorUserId: number, availableDate?: string): Promise<PublicAvailability[]> {
+export function listPublicAvailabilitiesByDoctor(
+  doctorUserId: number,
+  availableDate?: string,
+  includeBooked = false
+): Promise<PublicAvailability[]> {
   const params = new URLSearchParams();
   params.set("doctor_user_id", String(doctorUserId));
   if (availableDate) {
     params.set("available_date", availableDate);
+  }
+  if (includeBooked) {
+    params.set("include_booked", "true");
   }
   return request<PublicAvailability[]>(`/api/v1/public/availabilities?${params.toString()}`);
 }
@@ -240,5 +279,15 @@ export function reschedulePublicAppointment(
       booking_session_token: bookingSessionToken,
       new_availability_id: newAvailabilityId
     }
+  });
+}
+
+export function joinPublicWaitingList(payload: {
+  availability_id: number;
+  patient: PublicBookingPatientInput;
+}): Promise<PublicJoinWaitingListResponse> {
+  return request<PublicJoinWaitingListResponse>("/api/v1/public/waiting-list/join", {
+    method: "POST",
+    body: payload
   });
 }

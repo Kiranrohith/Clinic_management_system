@@ -53,7 +53,7 @@ export function DoctorProfilePage() {
 
   const slotsQuery = useQuery({
     queryKey: ["public", "doctor-slots", parsedDoctorId, selectedDate],
-    queryFn: () => listPublicAvailabilitiesByDoctor(parsedDoctorId, selectedDate),
+    queryFn: () => listPublicAvailabilitiesByDoctor(parsedDoctorId, selectedDate, true),
     enabled: Number.isInteger(parsedDoctorId) && parsedDoctorId > 0 && selectedDate.length > 0
   });
 
@@ -106,7 +106,7 @@ export function DoctorProfilePage() {
           ))}
         </div>
 
-        <h3 className="mt-6 text-lg font-semibold text-slate-900">Available slots</h3>
+        <h3 className="mt-6 text-lg font-semibold text-slate-900">Slots</h3>
         {slotsQuery.isLoading ? (
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -131,14 +131,27 @@ export function DoctorProfilePage() {
                 {formatTimeLabel(slot.slot_start_time)} - {formatTimeLabel(slot.slot_end_time)}
               </p>
               <p className="mt-1 text-sm text-slate-600">{slot.available_date}</p>
+              <p
+                className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                  slot.slot_status === "AVAILABLE"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-700"
+                }`}
+              >
+                {slot.slot_status === "AVAILABLE" ? "Available" : "Booked"}
+              </p>
               <button
-                className="mt-3 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                className={`mt-3 rounded-md px-3 py-2 text-sm font-medium text-white ${
+                  slot.slot_status === "AVAILABLE"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-amber-600 hover:bg-amber-700"
+                }`}
                 type="button"
                 onClick={() =>
                   navigate(`/book?availabilityId=${slot.availability_id}&doctorId=${slot.doctor_user_id}`)
                 }
               >
-                Book this slot
+                {slot.slot_status === "AVAILABLE" ? "Book this slot" : "Join Waiting List"}
               </button>
             </article>
           ))}

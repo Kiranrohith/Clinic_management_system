@@ -39,13 +39,17 @@ class PublicDoctorRepository:
         self,
         doctor_user_id: int | None,
         available_date,
+        include_booked: bool = False,
     ) -> list[tuple[DoctorAvailability, Slot, User]]:
+        allowed_statuses = [SlotStatus.AVAILABLE]
+        if include_booked:
+            allowed_statuses.extend([SlotStatus.BOOKED, SlotStatus.BLOCKED])
         stmt = (
             select(DoctorAvailability, Slot, User)
             .join(Slot, Slot.slot_id == DoctorAvailability.slot_id)
             .join(Doctor, Doctor.doctor_user_id == DoctorAvailability.doctor_user_id)
             .join(User, User.user_id == Doctor.doctor_user_id)
-            .where(DoctorAvailability.slot_status == SlotStatus.AVAILABLE)
+            .where(DoctorAvailability.slot_status.in_(allowed_statuses))
             .order_by(DoctorAvailability.available_date.asc(), Slot.slot_start_time.asc())
         )
         if doctor_user_id is not None:
