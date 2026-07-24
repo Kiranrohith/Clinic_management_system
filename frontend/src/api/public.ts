@@ -125,9 +125,9 @@ export type PublicAppointmentHistoryItem = {
   appointment_id: number;
   patient_id: number;
   patient_name: string;
-  patient_phone: string;
+  patient_phone: string; 
   doctor_user_id: number;
-  doctor_name: string;
+  doctor_name: string; 
   availability_id: number;
   available_date: string;
   slot_start_time: string;

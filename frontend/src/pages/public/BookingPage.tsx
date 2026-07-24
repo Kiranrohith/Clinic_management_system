@@ -172,6 +172,7 @@ export function BookingPage() {
     },
     onError: (error) => setMessage(error instanceof Error ? error.message : "Failed to book appointment.")
   });
+  
   const joinWaitingMutation = useMutation({
     mutationFn: (payload: {
       availability_id: number;
