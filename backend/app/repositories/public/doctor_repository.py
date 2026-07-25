@@ -43,7 +43,7 @@ class PublicDoctorRepository:
     ) -> list[tuple[DoctorAvailability, Slot, User]]:
         allowed_statuses = [SlotStatus.AVAILABLE]
         if include_booked:
-            allowed_statuses.extend([SlotStatus.BOOKED, SlotStatus.BLOCKED])
+            allowed_statuses.append(SlotStatus.BOOKED)
         stmt = (
             select(DoctorAvailability, Slot, User)
             .join(Slot, Slot.slot_id == DoctorAvailability.slot_id)
