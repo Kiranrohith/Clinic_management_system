@@ -402,6 +402,11 @@ class PublicBookingService:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Selected slot is no longer valid for current clinic schedule.")
             if availability.slot_status == SlotStatus.AVAILABLE:
                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Slot is currently available. Please book directly.")
+            if availability.slot_status != SlotStatus.BOOKED:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Waiting list is only available for booked slots.",
+                )
             patient = self.repo.get_patient_by_phone(patient_input.phone.strip())
             if patient is None:
                 patient = self.repo.create_patient(
