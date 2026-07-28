@@ -55,3 +55,16 @@ class FrontdeskAvailabilityRepository:
         if available_date is not None:
             stmt = stmt.where(DoctorAvailability.available_date == available_date)
         return list(self.db.execute(stmt).all())
+
+    def get_availability_for_update(self, availability_id: int) -> DoctorAvailability | None:
+        stmt = (
+            select(DoctorAvailability)
+            .where(DoctorAvailability.availability_id == availability_id)
+            .with_for_update()
+        )
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def save_availability(self, availability: DoctorAvailability) -> DoctorAvailability:
+        self.db.add(availability)
+        self.db.flush()
+        return availability
