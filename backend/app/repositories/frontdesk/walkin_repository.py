@@ -13,6 +13,10 @@ class FrontdeskWalkInRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    def get_patient_by_phone(self, phone: str) -> Patient | None:
+        stmt = select(Patient).where(Patient.phone == phone)
+        return self.db.execute(stmt).scalar_one_or_none()
+
     def get_patient_by_phone(self, phone:str)-> Patient|None:
         stmt=select(Patient).where(Patient.phone == phone)
         return self.db.execute(stmt).scalar_one_or_none()
