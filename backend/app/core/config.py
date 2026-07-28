@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     app_name: str = "Clinic Management System"
     debug: bool = False
-    database_url: str = "postgresql+psycopg2://postgres:Kiran246@localhost:5432/clinic-appointment-system"
+    database_url: str = "postgresql+psycopg2://postgres:Berlin243@localhost:5432/CMS"
     secret_key: str = "change_me"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
