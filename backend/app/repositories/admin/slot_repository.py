@@ -3,6 +3,7 @@ from datetime import datetime, time
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.appointment import Appointment
 from app.models.schedule import DoctorAvailability, Slot
 
 
@@ -36,6 +37,27 @@ class AdminSlotRepository:
 
     def get_slot_by_id(self, slot_id: int) -> Slot | None:
         return self.db.execute(select(Slot).where(Slot.slot_id == slot_id)).scalar_one_or_none()
+
+    def count_availabilities_for_slot(self, slot_id: int) -> int:
+        stmt = select(DoctorAvailability).where(DoctorAvailability.slot_id == slot_id)
+        return len(self.db.execute(stmt).scalars().all())
+
+    def count_appointments_for_slot(self, slot_id: int) -> int:
+        stmt = (
+            select(Appointment)
+            .join(DoctorAvailability, Appointment.availability_id == DoctorAvailability.availability_id)
+            .where(DoctorAvailability.slot_id == slot_id)
+        )
+        return len(self.db.execute(stmt).scalars().all())
+
+    def delete_availabilities_for_slot(self, slot_id: int) -> int:
+        rows = list(
+            self.db.execute(select(DoctorAvailability).where(DoctorAvailability.slot_id == slot_id)).scalars().all()
+        )
+        for row in rows:
+            self.db.delete(row)
+        self.db.flush()
+        return len(rows)
 
     def delete_slot(self, slot: Slot) -> None:
         self.db.delete(slot)

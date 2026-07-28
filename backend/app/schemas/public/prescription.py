@@ -2,9 +2,11 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
+from app.schemas.validators import PhoneNumberStr
+
 
 class PublicPrescriptionOtpRequest(BaseModel):
-    phone: str = Field(min_length=7, max_length=15)
+    phone: PhoneNumberStr
 
 
 class PublicPrescriptionOtpResponse(BaseModel):
@@ -14,7 +16,7 @@ class PublicPrescriptionOtpResponse(BaseModel):
 
 
 class PublicPrescriptionVerifyRequest(BaseModel):
-    phone: str = Field(min_length=7, max_length=15)
+    phone: PhoneNumberStr
     otp_code: str = Field(min_length=4, max_length=10)
 
 

@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.schemas.validators import PhoneNumberStr
+
 
 class DoctorProfileInput(BaseModel):
     qualification: str | None = Field(default=None, max_length=200)
@@ -16,7 +18,7 @@ class ManagementUserCreateRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
-    phone: str | None = Field(default=None, max_length=15)
+    phone: PhoneNumberStr | None = None
     role_name: Literal["ADMIN", "DOCTOR", "FRONTDESK"]
     doctor_profile: DoctorProfileInput | None = None
 
@@ -33,7 +35,7 @@ class ManagementUserResponse(BaseModel):
 
 class ManagementUserUpdateRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=100)
-    phone: str | None = Field(default=None, max_length=15)
+    phone: PhoneNumberStr | None = None
 
 
 class UserStatusUpdateRequest(BaseModel):

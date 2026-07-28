@@ -30,6 +30,12 @@ import {
 import { getPublicClinicSettings } from "../../api/public";
 import { NotificationPanel } from "../../components/NotificationPanel";
 import { useAuth } from "../../hooks/useAuth";
+import {
+  getDobMaxDate,
+  isDobBeforeToday,
+  isValidOptionalPhoneNumber,
+  isValidPhoneNumber
+} from "../../utils/validators";
 
 type FrontdeskTab = "dashboard" | "appointments" | "walkins" | "contacts" | "profile";
 type WalkinStatus = "WAITING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
@@ -271,7 +277,8 @@ function PatientSection({
   form,
   onFormChange,
   onSave,
-  savePending
+  savePending,
+  dobMaxDate
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -285,6 +292,7 @@ function PatientSection({
   onFormChange: (next: PatientDraft) => void;
   onSave: () => void;
   savePending: boolean;
+  dobMaxDate: string;
 }) {
   return (
     <section className="rounded-3xl border border-slate-200">
@@ -345,6 +353,10 @@ function PatientSection({
               placeholder="Phone"
               value={form.phone}
               onChange={(event) => onFormChange({ ...form, phone: event.target.value })}
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              minLength={10}
+              maxLength={10}
             />
             <select
               className="rounded-2xl border border-slate-200 px-4 py-3"
@@ -359,6 +371,7 @@ function PatientSection({
             <input
               className="rounded-2xl border border-slate-200 px-4 py-3"
               type="date"
+              max={dobMaxDate}
               value={form.dob}
               onChange={(event) => onFormChange({ ...form, dob: event.target.value })}
             />
@@ -436,6 +449,7 @@ export function FrontdeskHomePage() {
   const [contactStatusFilter, setContactStatusFilter] = useState<"ALL" | ContactQueryStatus>("NEW");
   const [contactDrafts, setContactDrafts] = useState<Record<number, { status: ContactQueryStatus; notes: string }>>({});
   const [appointmentSpecFilter, setAppointmentSpecFilter] = useState("");
+  const dobMaxDate = getDobMaxDate();
 
   const dashboardDoctorId = dashboardDoctorFilter === "ALL" ? undefined : Number(dashboardDoctorFilter);
   const appointmentDoctorId = appointmentDoctorFilter === "ALL" ? undefined : Number(appointmentDoctorFilter);
@@ -657,8 +671,15 @@ export function FrontdeskHomePage() {
   };
 
   const saveAppointmentPatient = () => {
-    if (appointmentPatientForm.full_name.trim().length < 2 || appointmentPatientForm.phone.trim().length < 7) {
+    if (
+      appointmentPatientForm.full_name.trim().length < 2 ||
+      !isValidPhoneNumber(appointmentPatientForm.phone)
+    ) {
       setMessage("Enter valid patient details before saving.");
+      return;
+    }
+    if (!isDobBeforeToday(appointmentPatientForm.dob)) {
+      setMessage("Date of birth must be before today.");
       return;
     }
     upsertPatientMutation.mutate(
@@ -683,8 +704,12 @@ export function FrontdeskHomePage() {
   };
 
   const saveWalkinPatient = () => {
-    if (walkinPatientForm.full_name.trim().length < 2 || walkinPatientForm.phone.trim().length < 7) {
+    if (walkinPatientForm.full_name.trim().length < 2 || !isValidPhoneNumber(walkinPatientForm.phone)) {
       setMessage("Enter valid patient details before saving.");
+      return;
+    }
+    if (!isDobBeforeToday(walkinPatientForm.dob)) {
+      setMessage("Date of birth must be before today.");
       return;
     }
     upsertPatientMutation.mutate(
@@ -1084,6 +1109,10 @@ export function FrontdeskHomePage() {
                       placeholder="Phone"
                       value={profileForm.phone}
                       onChange={(event) => setProfileForm((prev) => ({ ...prev, phone: event.target.value }))}
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      minLength={10}
+                      maxLength={10}
                     />
                   </div>
                   <button
@@ -1093,6 +1122,10 @@ export function FrontdeskHomePage() {
                     onClick={() => {
                       if (profileForm.full_name.trim().length < 2) {
                         setMessage("Enter a valid full name.");
+                        return;
+                      }
+                      if (!isValidOptionalPhoneNumber(profileForm.phone)) {
+                        setMessage("Phone number must be exactly 10 digits.");
                         return;
                       }
                       updateProfileMutation.mutate({
@@ -1224,6 +1257,7 @@ export function FrontdeskHomePage() {
                   onFormChange={setAppointmentPatientForm}
                   onSave={saveAppointmentPatient}
                   savePending={upsertPatientMutation.isPending}
+                  dobMaxDate={dobMaxDate}
                 />
 
                 <section className="rounded-3xl border border-slate-200">
@@ -1355,6 +1389,7 @@ export function FrontdeskHomePage() {
                   onFormChange={setWalkinPatientForm}
                   onSave={saveWalkinPatient}
                   savePending={upsertPatientMutation.isPending}
+                  dobMaxDate={dobMaxDate}
                 />
 
                 <section className="rounded-3xl border border-slate-200">
