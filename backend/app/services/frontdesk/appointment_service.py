@@ -50,6 +50,8 @@ class FrontdeskAppointmentService:
         doctor_user_id: int | None,
         available_date: date | None,
     ) -> list[FrontdeskAvailabilityResponse]:
+        today = date.today()
+        current_time = datetime.now().time()
         effective_slot_ids = self._effective_slot_ids()
         rows = self.avail_repo.list_available_rows(doctor_user_id=doctor_user_id, available_date=available_date)
         return [
@@ -65,6 +67,10 @@ class FrontdeskAppointmentService:
             )
             for availability, slot, user in rows
             if slot.slot_id in effective_slot_ids
+            and not (
+                availability.available_date == today
+                and slot.slot_start_time <= current_time
+            )
         ]
 
     def list_appointments(
