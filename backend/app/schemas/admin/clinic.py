@@ -2,10 +2,12 @@ from datetime import time
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.schemas.validators import PhoneNumberStr
+
 
 class ClinicSettingsUpsertRequest(BaseModel):
     clinic_name: str = Field(min_length=2, max_length=150)
-    clinic_phone: str | None = Field(default=None, max_length=15)
+    clinic_phone: PhoneNumberStr | None = None
     clinic_email: EmailStr | None = None
     clinic_address: str | None = None
     opening_time: time

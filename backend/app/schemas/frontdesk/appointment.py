@@ -2,10 +2,12 @@ from datetime import date, datetime, time
 
 from pydantic import BaseModel, Field
 
+from app.schemas.validators import PhoneNumberStr
+
 
 class FrontdeskBookAppointmentRequest(BaseModel):
     availability_id: int
-    patient_phone: str = Field(min_length=7, max_length=15)
+    patient_phone: PhoneNumberStr
 
 
 class FrontdeskAppointmentResponse(BaseModel):

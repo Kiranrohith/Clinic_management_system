@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.constants import ROLE_FRONTDESK
@@ -6,6 +8,7 @@ from app.core.permissions import require_roles
 from app.database.session import get_db
 from app.models.user import User
 from app.schemas.frontdesk.patient import FrontdeskPatientUpsertRequest
+from app.schemas.validators import PHONE_NUMBER_PATTERN
 from app.services.frontdesk.patient_service import FrontdeskPatientService
 from app.utils.response import success_response
 
@@ -14,7 +17,7 @@ router = APIRouter(prefix="/api/v1/frontdesk", tags=["Frontdesk"])
 
 @router.get("/patients/by-phone")
 def get_patient_by_phone(
-    phone: str,
+    phone: Annotated[str, Query(min_length=10, max_length=10, pattern=PHONE_NUMBER_PATTERN)],
     _: User = Depends(require_roles(ROLE_FRONTDESK)),
     db: Session = Depends(get_db),
 ):

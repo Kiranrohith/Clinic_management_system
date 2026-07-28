@@ -132,7 +132,16 @@ export function BookingsHistoryPage() {
         {!sessionToken ? (
           <>
             <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-              <input className="rounded border px-3 py-2" placeholder="Your phone number" value={authPhone} onChange={(e) => setAuthPhone(e.target.value)} />
+              <input
+                className="rounded border px-3 py-2"
+                placeholder="Your phone number"
+                value={authPhone}
+                onChange={(e) => setAuthPhone(e.target.value)}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                minLength={10}
+                maxLength={10}
+              />
               <button
                 className="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                 type="button"

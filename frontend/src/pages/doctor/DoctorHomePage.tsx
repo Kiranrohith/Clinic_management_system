@@ -28,6 +28,7 @@ import {
 } from "../../api/doctor";
 import { NotificationPanel } from "../../components/NotificationPanel";
 import { useAuth } from "../../hooks/useAuth";
+import { isValidOptionalPhoneNumber } from "../../utils/validators";
 
 type DoctorTab = "dashboard" | "availability" | "appointments" | "prescriptions" | "profile";
 
@@ -606,6 +607,10 @@ function ProfileEditor({
               className="w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none ring-blue-500 focus:ring"
               value={profileForm.phone}
               onChange={(event) => onProfileChange("phone", event.target.value)}
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              minLength={10}
+              maxLength={10}
             />
           </label>
           <label className="text-sm text-slate-700">
@@ -1028,6 +1033,10 @@ export function DoctorHomePage() {
   const handleSaveProfile = () => {
     if (profileForm.full_name.trim().length < 2) {
       addToast("Doctor name must contain at least 2 characters.", "error");
+      return;
+    }
+    if (!isValidOptionalPhoneNumber(profileForm.phone)) {
+      addToast("Phone number must be exactly 10 digits.", "error");
       return;
     }
     const normalizedExperience = profileForm.experience_years.trim();

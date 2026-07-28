@@ -19,7 +19,12 @@ import {
   getPublicBookingSessionToken,
   setPublicBookingSession
 } from "../../utils/publicBookingSession";
-import { isValidOtpCode, isValidPhoneNumber } from "../../utils/validators";
+import {
+  getDobMaxDate,
+  isDobBeforeToday,
+  isValidOtpCode,
+  isValidPhoneNumber
+} from "../../utils/validators";
 import {
   bookingConfirmationFileName,
   buildBookingConfirmationArtifactContent,
@@ -47,6 +52,7 @@ export function BookingPage() {
   const [sessionRemainingSeconds, setSessionRemainingSeconds] = useState<number>(() =>
     getPublicBookingSessionRemainingSeconds()
   );
+  const dobMaxDate = getDobMaxDate();
   const [patientPhone, setPatientPhone] = useState("");
   const [existingPatient, setExistingPatient] = useState<{
     patient_id: number;
@@ -255,14 +261,23 @@ export function BookingPage() {
         ) : (
           <>
             <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
-              <input className="rounded border px-3 py-2" placeholder="Your phone number" value={authPhone} onChange={(e) => setAuthPhone(e.target.value)} />
+              <input
+                className="rounded border px-3 py-2"
+                placeholder="Your phone number"
+                value={authPhone}
+                onChange={(e) => setAuthPhone(e.target.value)}
+                inputMode="numeric"
+                pattern="[0-9]{10}"
+                minLength={10}
+                maxLength={10}
+              />
               <button
                 className="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                 type="button"
                 disabled={requestOtpMutation.isPending || !isValidPhoneNumber(authPhone)}
                 onClick={() => {
                   if (!isValidPhoneNumber(authPhone)) {
-                    setMessage("Enter a valid phone number with 7 to 15 digits.");
+                    setMessage("Enter a valid 10-digit phone number.");
                     return;
                   }
                   requestOtpMutation.mutate();
@@ -295,7 +310,16 @@ export function BookingPage() {
       <section className="mt-5 rounded-2xl border bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Step 2: Select patient</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
-          <input className="rounded border px-3 py-2" placeholder="Patient phone number" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} />
+          <input
+            className="rounded border px-3 py-2"
+            placeholder="Patient phone number"
+            value={patientPhone}
+            onChange={(e) => setPatientPhone(e.target.value)}
+            inputMode="numeric"
+            pattern="[0-9]{10}"
+            minLength={10}
+            maxLength={10}
+          />
           <button
             className="rounded border px-4 py-2 text-sm font-medium hover:bg-slate-100 disabled:opacity-60"
             type="button"
@@ -325,7 +349,7 @@ export function BookingPage() {
               <option value="FEMALE">Female</option>
               <option value="OTHER">Other</option>
             </select>
-            <input className="rounded border px-3 py-2" type="date" value={newPatient.dob} onChange={(e) => setNewPatient((p) => ({ ...p, dob: e.target.value }))} />
+            <input className="rounded border px-3 py-2" type="date" max={dobMaxDate} value={newPatient.dob} onChange={(e) => setNewPatient((p) => ({ ...p, dob: e.target.value }))} />
             <input className="rounded border px-3 py-2" placeholder="Blood group" value={newPatient.blood_group} onChange={(e) => setNewPatient((p) => ({ ...p, blood_group: e.target.value }))} />
             <input className="rounded border px-3 py-2" placeholder="Emergency contact" value={newPatient.emergency_contact} onChange={(e) => setNewPatient((p) => ({ ...p, emergency_contact: e.target.value }))} />
             <input className="rounded border px-3 py-2" placeholder="Address" value={newPatient.address} onChange={(e) => setNewPatient((p) => ({ ...p, address: e.target.value }))} />
@@ -357,6 +381,10 @@ export function BookingPage() {
             }
             if (!isValidPhoneNumber(patientPhone)) {
               setMessage("Enter a valid patient phone number.");
+              return;
+            }
+            if (!existingPatient && !isDobBeforeToday(newPatient.dob)) {
+              setMessage("Date of birth must be before today.");
               return;
             }
 

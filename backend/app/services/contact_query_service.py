@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.constants import ROLE_ADMIN, ROLE_DOCTOR, ROLE_FRONTDESK
-from app.models.enums import ContactStatus
+from app.models.enums import ContactStatus, NotificationType
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.contact import ContactQueryItemResponse, ContactQueryUpdateRequest
@@ -58,17 +58,18 @@ class ContactQueryService:
 
         receiver_ids = self.user_repository.list_active_user_ids_by_roles((ROLE_ADMIN, ROLE_FRONTDESK))
         unique_ids = sorted(set(receiver_ids))
-        self.notification_service.notify_users(
-            user_ids=unique_ids,
-            title="Contact query updated",
-            message=f"Contact query #{contact.contact_id} moved to {contact.status.value}.",
-            notification_type="CONTACT_QUERY",
-            metadata={
-                "contact_id": contact.contact_id,
-                "status": contact.status.value,
-                "handled_by": contact.handled_by,
-            },
-        )
+        for user_id in unique_ids:
+            self.notification_service.create_for_user(
+                user_id=user_id,
+                notification_type=NotificationType.NEW_CONTACT_REQUEST,
+                title="Contact query updated",
+                message=f"Contact query #{contact.contact_id} moved to {contact.status.value}.",
+                metadata={
+                    "contact_id": contact.contact_id,
+                    "status": contact.status.value,
+                    "handled_by": contact.handled_by,
+                },
+            )
 
         return self._to_response(contact)
 

@@ -31,6 +31,7 @@ import { changePassword, logout } from "../../api/auth";
 import { getAdminDashboard } from "../../api/dashboard";
 import { NotificationPanel } from "../../components/NotificationPanel";
 import { useAuth } from "../../hooks/useAuth";
+import { isValidOptionalPhoneNumber } from "../../utils/validators";
 
 type AdminTab = "dashboard" | "accounts" | "settings" | "profile";
 type AccountSubTab = "doctors" | "frontdesk" | "patients";
@@ -306,7 +307,13 @@ export function AdminHomePage() {
 
   const onLogout = async () => { try { await logout(); } finally { clearSession(); navigate("/management"); } };
 
-  const handleSaveSettings = () => { saveClinicMutation.mutate(clinicForm); };
+  const handleSaveSettings = () => {
+    if (!isValidOptionalPhoneNumber(clinicForm.clinic_phone ?? "")) {
+      addToast("Clinic phone must be exactly 10 digits.", "error");
+      return;
+    }
+    saveClinicMutation.mutate(clinicForm);
+  };
   const handleAddSpec = () => { if (newSpecName.trim().length < 2) { addToast("Specialization name too short.", "error"); return; } addSpecMutation.mutate(newSpecName.trim()); };
   const handleAddSlot = () => {
     if (!newSlotTime) { addToast("Select a time.", "error"); return; }
@@ -323,6 +330,7 @@ export function AdminHomePage() {
     if (doctorForm.full_name.trim().length < 2) { addToast("Doctor name required.", "error"); return; }
     if (!doctorForm.email.trim()) { addToast("Email required.", "error"); return; }
     if (doctorForm.password.length < 8) { addToast("Password min 8 chars.", "error"); return; }
+    if (!isValidOptionalPhoneNumber(doctorForm.phone)) { addToast("Phone must be exactly 10 digits.", "error"); return; }
     createDoctorMutation.mutate({ full_name: doctorForm.full_name.trim(), email: doctorForm.email.trim(), password: doctorForm.password, phone: doctorForm.phone.trim() || undefined, role_name: "DOCTOR", doctor_profile: { qualification: doctorForm.qualification.trim() || undefined, experience_years: doctorForm.experience_years ? parseInt(doctorForm.experience_years, 10) : undefined, consultation_fee: doctorForm.consultation_fee ? parseFloat(doctorForm.consultation_fee) : undefined, about: doctorForm.about.trim() || undefined, specialization_ids: doctorForm.specialization_ids } });
   };
 
@@ -330,16 +338,19 @@ export function AdminHomePage() {
     if (frontdeskForm.full_name.trim().length < 2) { addToast("Name required.", "error"); return; }
     if (!frontdeskForm.email.trim()) { addToast("Email required.", "error"); return; }
     if (frontdeskForm.password.length < 8) { addToast("Password min 8 chars.", "error"); return; }
+    if (!isValidOptionalPhoneNumber(frontdeskForm.phone)) { addToast("Phone must be exactly 10 digits.", "error"); return; }
     createFrontdeskMutation.mutate({ full_name: frontdeskForm.full_name.trim(), email: frontdeskForm.email.trim(), password: frontdeskForm.password, phone: frontdeskForm.phone.trim() || undefined, role_name: "FRONTDESK" });
   };
 
   const handleEditUser = () => {
     if (!editUserId || editForm.full_name.trim().length < 2) { addToast("Name required.", "error"); return; }
+    if (!isValidOptionalPhoneNumber(editForm.phone)) { addToast("Phone must be exactly 10 digits.", "error"); return; }
     editUserMutation.mutate({ userId: editUserId, payload: { full_name: editForm.full_name.trim(), phone: editForm.phone.trim() || undefined } });
   };
 
   const handleSaveProfile = () => {
     if (profileForm.full_name.trim().length < 2) { addToast("Name required.", "error"); return; }
+    if (!isValidOptionalPhoneNumber(profileForm.phone)) { addToast("Phone must be exactly 10 digits.", "error"); return; }
     saveProfileMutation.mutate({ full_name: profileForm.full_name.trim(), phone: profileForm.phone.trim() || undefined });
   };
 
@@ -566,7 +577,7 @@ export function AdminHomePage() {
                   <h2 className="mb-5 text-base font-semibold text-slate-800">Clinic Identity</h2>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Field label="Clinic Name"><input className={inputCls} value={clinicForm.clinic_name} onChange={(e) => setClinicForm((f) => ({ ...f, clinic_name: e.target.value }))} /></Field>
-                    <Field label="Clinic Phone"><input className={inputCls} value={clinicForm.clinic_phone ?? ""} onChange={(e) => setClinicForm((f) => ({ ...f, clinic_phone: e.target.value }))} /></Field>
+                    <Field label="Clinic Phone"><input className={inputCls} value={clinicForm.clinic_phone ?? ""} onChange={(e) => setClinicForm((f) => ({ ...f, clinic_phone: e.target.value }))} inputMode="numeric" pattern="[0-9]{10}" minLength={10} maxLength={10} /></Field>
                     <Field label="Clinic Email"><input className={inputCls} type="email" value={clinicForm.clinic_email ?? ""} onChange={(e) => setClinicForm((f) => ({ ...f, clinic_email: e.target.value }))} /></Field>
                     <Field label="Address"><input className={inputCls} value={clinicForm.clinic_address ?? ""} onChange={(e) => setClinicForm((f) => ({ ...f, clinic_address: e.target.value }))} /></Field>
                   </div>
@@ -680,7 +691,7 @@ export function AdminHomePage() {
                   <div className="space-y-4">
                     <Field label="Full Name"><input className={inputCls} value={profileForm.full_name} onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))} /></Field>
                     <Field label="Email"><input className={`${inputCls} bg-slate-50 cursor-not-allowed`} value={profileQuery.data?.email ?? user?.email ?? ""} readOnly /></Field>
-                    <Field label="Phone"><input className={inputCls} value={profileForm.phone} onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))} /></Field>
+                    <Field label="Phone"><input className={inputCls} value={profileForm.phone} onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))} inputMode="numeric" pattern="[0-9]{10}" minLength={10} maxLength={10} /></Field>
                   </div>
                   <button className="mt-5 flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition" type="button" disabled={saveProfileMutation.isPending} onClick={handleSaveProfile}>
                     {saveProfileMutation.isPending ? "Saving…" : "Save Changes"}
@@ -710,7 +721,7 @@ export function AdminHomePage() {
         <div className="space-y-4">
           <Field label="Full Name *"><input className={inputCls} value={doctorForm.full_name} onChange={(e) => setDoctorForm((f) => ({ ...f, full_name: e.target.value }))} /></Field>
           <Field label="Email *"><input className={inputCls} type="email" value={doctorForm.email} onChange={(e) => setDoctorForm((f) => ({ ...f, email: e.target.value }))} /></Field>
-          <Field label="Phone"><input className={inputCls} value={doctorForm.phone} onChange={(e) => setDoctorForm((f) => ({ ...f, phone: e.target.value }))} /></Field>
+          <Field label="Phone"><input className={inputCls} value={doctorForm.phone} onChange={(e) => setDoctorForm((f) => ({ ...f, phone: e.target.value }))} inputMode="numeric" pattern="[0-9]{10}" minLength={10} maxLength={10} /></Field>
           <Field label="Qualification"><input className={inputCls} value={doctorForm.qualification} onChange={(e) => setDoctorForm((f) => ({ ...f, qualification: e.target.value }))} /></Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Experience (yrs)"><input className={inputCls} type="number" min={0} value={doctorForm.experience_years} onChange={(e) => setDoctorForm((f) => ({ ...f, experience_years: e.target.value }))} /></Field>
@@ -744,7 +755,7 @@ export function AdminHomePage() {
         <div className="space-y-4">
           <Field label="Full Name *"><input className={inputCls} value={frontdeskForm.full_name} onChange={(e) => setFrontdeskForm((f) => ({ ...f, full_name: e.target.value }))} /></Field>
           <Field label="Email *"><input className={inputCls} type="email" value={frontdeskForm.email} onChange={(e) => setFrontdeskForm((f) => ({ ...f, email: e.target.value }))} /></Field>
-          <Field label="Phone"><input className={inputCls} value={frontdeskForm.phone} onChange={(e) => setFrontdeskForm((f) => ({ ...f, phone: e.target.value }))} /></Field>
+          <Field label="Phone"><input className={inputCls} value={frontdeskForm.phone} onChange={(e) => setFrontdeskForm((f) => ({ ...f, phone: e.target.value }))} inputMode="numeric" pattern="[0-9]{10}" minLength={10} maxLength={10} /></Field>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
             <p className="mb-1 text-xs font-semibold text-amber-700">Generated Password</p>
             <div className="flex items-center gap-2">
@@ -771,7 +782,7 @@ export function AdminHomePage() {
               <div><p className="font-semibold text-slate-900">{editUser.full_name}</p><p className="text-sm text-slate-500">{editUser.email}</p><span className={statusBadge(editUser.status)}>{editUser.status}</span></div>
             </div>
             <Field label="Full Name"><input className={inputCls} value={editForm.full_name} onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))} /></Field>
-            <Field label="Phone"><input className={inputCls} value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} /></Field>
+            <Field label="Phone"><input className={inputCls} value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} inputMode="numeric" pattern="[0-9]{10}" minLength={10} maxLength={10} /></Field>
             <div className="flex gap-3 pt-2">
               <button className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition" type="button" onClick={() => setEditUserId(null)}>Cancel</button>
               <button className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition" type="button" disabled={editUserMutation.isPending} onClick={handleEditUser}>
