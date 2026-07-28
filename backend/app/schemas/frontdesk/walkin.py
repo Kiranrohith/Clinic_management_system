@@ -3,12 +3,13 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 from app.models.enums import WalkInStatus
+from app.schemas.validators import PhoneNumberStr
 
 
 class FrontdeskWalkInCreateRequest(BaseModel):
     doctor_user_id: int
     token_date: date
-    patient_phone: str = Field(min_length=7, max_length=15)
+    patient_phone: PhoneNumberStr
     notes: str | None = None
 
 

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 
 from app.models.enums import UserStatus
+from app.schemas.validators import PhoneNumberStr
 
 
 class FrontdeskProfileResponse(BaseModel):
@@ -14,4 +15,4 @@ class FrontdeskProfileResponse(BaseModel):
 
 class FrontdeskProfileUpdateRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=100)
-    phone: str | None = Field(default=None, min_length=7, max_length=15)
+    phone: PhoneNumberStr | None = None

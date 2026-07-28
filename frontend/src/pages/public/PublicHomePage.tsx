@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 
 import { getPublicClinicSettings, listPublicDoctors, submitPublicContactQuery } from "../../api/public";
+import { isValidPhoneNumber } from "../../utils/validators";
 
 function formatClinicTimeRange(openingTime: string, closingTime: string): string {
   const formatTime = (value: string): string => {
@@ -175,6 +176,10 @@ export function PublicHomePage() {
               placeholder="Phone"
               value={contactForm.phone}
               onChange={(event) => setContactForm((prev) => ({ ...prev, phone: event.target.value }))}
+              inputMode="numeric"
+              pattern="[0-9]{10}"
+              minLength={10}
+              maxLength={10}
             />
             <input
               className="rounded-md border border-slate-300 px-3 py-2 outline-none ring-emerald-500 focus:ring"
@@ -202,7 +207,7 @@ export function PublicHomePage() {
             onClick={() => {
               if (
                 contactForm.full_name.trim().length < 2 ||
-                contactForm.phone.trim().length < 7 ||
+                !isValidPhoneNumber(contactForm.phone) ||
                 contactForm.message.trim().length < 1
               ) {
                 setContactMessage("Please fill in required contact details.");

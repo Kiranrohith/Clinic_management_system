@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -9,6 +11,7 @@ from app.schemas.public.booking import (
     PublicBookAppointmentRequest,
     PublicJoinWaitingListRequest,
 )
+from app.schemas.validators import PHONE_NUMBER_PATTERN
 from app.services.public.booking_service import PublicBookingService
 from app.utils.response import success_response
 
@@ -58,7 +61,10 @@ def join_waiting_list(payload: PublicJoinWaitingListRequest, db: Session = Depen
 @router.get("/bookings/patients/by-phone")
 def get_patient_for_booking(
     booking_session_token: str,
-    patient_phone: str,
+    patient_phone: Annotated[
+        str,
+        Query(min_length=10, max_length=10, pattern=PHONE_NUMBER_PATTERN),
+    ],
     db: Session = Depends(get_db),
 ):
     data = PublicBookingService(db).get_patient_for_booking(
