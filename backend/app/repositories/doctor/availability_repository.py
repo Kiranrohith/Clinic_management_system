@@ -81,6 +81,11 @@ class DoctorAvailabilityRepository:
         self.db.flush()
         return availability
 
+    def save_availability(self, availability: DoctorAvailability) -> DoctorAvailability:
+        self.db.add(availability)
+        self.db.flush()
+        return availability
+
     def get_availability_for_update(
         self,
         availability_id: int,

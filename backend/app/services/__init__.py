@@ -14,7 +14,6 @@ from app.services.doctor import (
     DoctorAvailabilityService,
     DoctorAppointmentService,
     DoctorPrescriptionService,
-    DoctorWalkInService,
     DoctorProfileService,
 )
 from app.services.frontdesk import (
@@ -46,7 +45,6 @@ __all__ = [
     "DoctorAvailabilityService",
     "DoctorAppointmentService",
     "DoctorPrescriptionService",
-    "DoctorWalkInService",
     "DoctorProfileService",
     "FrontdeskDashboardService",
     "FrontdeskPatientService",

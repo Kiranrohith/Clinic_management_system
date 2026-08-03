@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.patient import Patient
@@ -24,7 +24,7 @@ class FrontdeskPatientService:
     def _now() -> datetime:
         return datetime.now(UTC).replace(tzinfo=None)
 
-    def upsert_patient(self, payload: FrontdeskPatientUpsertRequest) -> FrontdeskPatientResponse:
+    def upsert_patient(self, payload: FrontdeskPatientUpsertRequest) -> dict[str, Any]:
         now = self._now()
         phone = payload.phone.strip()
         patient = self.repo.get_patient_by_phone(phone)
@@ -42,6 +42,7 @@ class FrontdeskPatientService:
             )
             saved = self.repo.create_patient(patient)
             logger.info("Frontdesk created patient patient_id=%s phone=%s", saved.patient_id, saved.phone)
+            message = "Patient created successfully."
         else:
             patient.full_name = payload.full_name.strip()
             patient.gender = payload.gender
@@ -52,21 +53,37 @@ class FrontdeskPatientService:
             patient.updated_at = now
             saved = self.repo.update_patient(patient)
             logger.info("Frontdesk updated patient patient_id=%s", saved.patient_id)
-        return self._to_response(saved)
+            message = "Patient updated successfully."
+        return {
+            "status_code": 200,
+            "message": message,
+            "data": self._to_response(saved).model_dump(),
+        }
 
-    def get_patient_by_phone(self, phone: str) -> FrontdeskPatientResponse:
+    def get_patient_by_phone(self, phone: str) -> dict[str, Any]:
         patient = self.repo.get_patient_by_phone(phone.strip())
         if patient is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
-        return self._to_response(patient)
+            return {"status_code": 404, "message": "Patient not found.", "data": None}
+        return {
+            "status_code": 200,
+            "message": "Patient fetched successfully.",
+            "data": self._to_response(patient).model_dump(),
+        }
 
-    def search_patients(self, query: str, limit: int) -> list[FrontdeskPatientSearchItemResponse]:
+    def search_patients(self, query: str, limit: int) -> dict[str, Any]:
         search = query.strip()
         if len(search) < 2:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Search query must be at least 2 characters.")
+            return {"status_code": 400, "message": "Search query must be at least 2 characters.", "data": []}
         safe_limit = max(1, min(limit, 20))
         rows = self.repo.search_patients(search, safe_limit)
-        return [FrontdeskPatientSearchItemResponse(patient_id=p.patient_id, full_name=p.full_name, phone=p.phone) for p in rows]
+        return {
+            "status_code": 200,
+            "message": "Patients fetched successfully.",
+            "data": [
+                FrontdeskPatientSearchItemResponse(patient_id=p.patient_id, full_name=p.full_name, phone=p.phone).model_dump()
+                for p in rows
+            ],
+        }
 
     @staticmethod
     def _to_response(patient: Patient) -> FrontdeskPatientResponse:

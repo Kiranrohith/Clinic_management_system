@@ -1,6 +1,7 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.constants import ROLE_FRONTDESK
@@ -10,9 +11,15 @@ from app.models.user import User
 from app.schemas.frontdesk.patient import FrontdeskPatientUpsertRequest
 from app.schemas.validators import PHONE_NUMBER_PATTERN
 from app.services.frontdesk.patient_service import FrontdeskPatientService
-from app.utils.response import success_response
 
 router = APIRouter(prefix="/api/v1/frontdesk", tags=["Frontdesk"])
+
+
+def _json_response(status_code: int, message: str, data: Any | None = None) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={"status_code": status_code, "message": message, "data": data},
+    )
 
 
 @router.get("/patients/by-phone")
@@ -21,8 +28,8 @@ def get_patient_by_phone(
     _: User = Depends(require_roles(ROLE_FRONTDESK)),
     db: Session = Depends(get_db),
 ):
-    data = FrontdeskPatientService(db).get_patient_by_phone(phone)
-    return success_response("Patient fetched successfully.", data.model_dump())
+    result = FrontdeskPatientService(db).get_patient_by_phone(phone)
+    return _json_response(result["status_code"], result["message"], result["data"])
 
 
 @router.get("/patients/search")
@@ -32,8 +39,8 @@ def search_patients(
     _: User = Depends(require_roles(ROLE_FRONTDESK)),
     db: Session = Depends(get_db),
 ):
-    data = FrontdeskPatientService(db).search_patients(q, limit)
-    return success_response("Patients fetched successfully.", [item.model_dump() for item in data])
+    result = FrontdeskPatientService(db).search_patients(q, limit)
+    return _json_response(result["status_code"], result["message"], result["data"])
 
 
 @router.post("/patients")
@@ -42,5 +49,5 @@ def upsert_patient(
     _: User = Depends(require_roles(ROLE_FRONTDESK)),
     db: Session = Depends(get_db),
 ):
-    data = FrontdeskPatientService(db).upsert_patient(payload)
-    return success_response("Patient saved successfully.", data.model_dump())
+    result = FrontdeskPatientService(db).upsert_patient(payload)
+    return _json_response(result["status_code"], result["message"], result["data"])

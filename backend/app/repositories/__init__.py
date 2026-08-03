@@ -10,7 +10,6 @@ from app.repositories.doctor import (
     DoctorAvailabilityRepository,
     DoctorAppointmentRepository,
     DoctorPrescriptionRepository,
-    DoctorWalkInRepository,
     DoctorProfileRepository,
     DoctorDashboardRepository,
 )
@@ -45,7 +44,6 @@ __all__ = [
     "DoctorAvailabilityRepository",
     "DoctorAppointmentRepository",
     "DoctorPrescriptionRepository",
-    "DoctorWalkInRepository",
     "DoctorProfileRepository",
     "DoctorDashboardRepository",
     "FrontdeskPatientRepository",

@@ -80,10 +80,13 @@ class DoctorAppointmentRepository:
         )
         return self.db.execute(stmt).scalar_one_or_none()
 
-    def save_appointment(self, appointment: Appointment) -> Appointment:
+    def create_appointment(self, appointment: Appointment) -> Appointment:
         self.db.add(appointment)
         self.db.flush()
         return appointment
+
+    def save_appointment(self, appointment: Appointment) -> Appointment:
+        return self.create_appointment(appointment)
 
     def list_waiting_entries_for_update(self, availability_id: int) -> list[WaitingList]:
         stmt = (

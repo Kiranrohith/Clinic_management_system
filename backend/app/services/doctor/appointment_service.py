@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.constants import ROLE_ADMIN, ROLE_FRONTDESK
@@ -51,14 +51,14 @@ class DoctorAppointmentService:
         try:
             return AppointmentStatus(value)
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid appointment_status filter.") from exc
+            raise ValueError("Invalid appointment_status filter.") from exc
 
     def list_appointments(
         self,
         doctor_user_id: int,
         available_date: date | None,
         appointment_status: str | None,
-    ) -> list[DoctorAppointmentResponse]:
+    ) -> list[dict[str, Any]]:
         parsed_status = self._parse_appointment_status(appointment_status)
         rows = self.appt_repo.list_appointment_rows(
             doctor_user_id=doctor_user_id,
@@ -78,15 +78,14 @@ class DoctorAppointmentService:
                 booking_source=a.booking_source.value if a.booking_source else None,
                 cancellation_reason=a.cancellation_reason,
                 completed_at=a.completed_at,
-            )
+            ).model_dump()
             for a, availability, slot, patient in rows
         ]
 
     def get_appointment_detail(self, doctor_user_id: int, appointment_id: int) -> DoctorAppointmentDetailResponse:
-        from app.schemas.doctor.prescription import DoctorPrescriptionResponse as RxResp
         row = self.appt_repo.get_appointment_row(doctor_user_id=doctor_user_id, appointment_id=appointment_id)
         if row is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found.")
+            raise LookupError("Appointment not found.")
         appointment, availability, slot, patient = row
         current_prescription = self.rx_repo.get_prescription_by_appointment(
             doctor_user_id=doctor_user_id, appointment_id=appointment_id
@@ -142,14 +141,14 @@ class DoctorAppointmentService:
             ],
         )
 
-    def complete_appointment(self, doctor_user_id: int, appointment_id: int) -> DoctorAppointmentResponse:
+    def complete_appointment(self, doctor_user_id: int, appointment_id: int) -> dict[str, Any]:
         now = self._now()
         with self.db.begin_nested():
             appointment = self.appt_repo.get_appointment_for_update(doctor_user_id=doctor_user_id, appointment_id=appointment_id)
             if appointment is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found.")
+                raise LookupError("Appointment not found.")
             if appointment.appointment_status != AppointmentStatus.BOOKED:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only BOOKED appointments can be completed.")
+                raise ValueError("Only BOOKED appointments can be completed.")
             appointment.appointment_status = AppointmentStatus.COMPLETED
             appointment.completed_at = now
             appointment.updated_by = doctor_user_id
@@ -169,17 +168,17 @@ class DoctorAppointmentService:
         doctor_user_id: int,
         appointment_id: int,
         payload: DoctorCancelAppointmentRequest,
-    ) -> DoctorAppointmentResponse:
+    ) -> dict[str, Any]:
         now = self._now()
         with self.db.begin_nested():
             appointment = self.appt_repo.get_appointment_for_update(doctor_user_id=doctor_user_id, appointment_id=appointment_id)
             if appointment is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found.")
+                raise LookupError("Appointment not found.")
             if appointment.appointment_status != AppointmentStatus.BOOKED:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only BOOKED appointments can be cancelled by doctor.")
+                raise ValueError("Only BOOKED appointments can be cancelled by doctor.")
             availability = self.avail_repo.get_availability_for_update(availability_id=appointment.availability_id, doctor_user_id=doctor_user_id)
             if availability is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Availability not found.")
+                raise LookupError("Availability not found.")
             appointment.appointment_status = AppointmentStatus.CANCELLED_BY_DOCTOR
             appointment.cancellation_reason = payload.cancellation_reason.strip()
             appointment.updated_by = doctor_user_id
@@ -216,7 +215,7 @@ class DoctorAppointmentService:
             )
         return self._get_appointment_response(doctor_user_id, appointment_id)
 
-    def _get_appointment_response(self, doctor_user_id: int, appointment_id: int) -> DoctorAppointmentResponse:
+    def _get_appointment_response(self, doctor_user_id: int, appointment_id: int) -> dict[str, Any]:
         rows = self.appt_repo.list_appointment_rows(doctor_user_id=doctor_user_id, available_date=None, appointment_status=None)
         for appointment, availability, slot, patient in rows:
             if appointment.appointment_id == appointment_id:
@@ -232,8 +231,8 @@ class DoctorAppointmentService:
                     booking_source=appointment.booking_source.value if appointment.booking_source else None,
                     cancellation_reason=appointment.cancellation_reason,
                     completed_at=appointment.completed_at,
-                )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Appointment not found.")
+                ).model_dump()
+        raise LookupError("Appointment not found.")
 
     @staticmethod
     def _to_rx_response(prescription) -> DoctorPrescriptionResponse:

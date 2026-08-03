@@ -42,12 +42,13 @@ class UserRepository:
         )
         return [int(item) for item in self.db.execute(stmt).scalars().all()]
 
-    def add(self, user: User) -> User:
+    def create(self, user: User) -> User:
         self.db.add(user)
         self.db.flush()
         return user
 
+    def add(self, user: User) -> User:
+        return self.create(user)
+
     def save(self, user: User) -> User:
-        self.db.add(user)
-        self.db.flush()
-        return user
+        return self.create(user)

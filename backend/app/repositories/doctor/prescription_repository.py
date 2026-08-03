@@ -46,6 +46,4 @@ class DoctorPrescriptionRepository:
         return prescription
 
     def save_prescription(self, prescription: Prescription) -> Prescription:
-        self.db.add(prescription)
-        self.db.flush()
-        return prescription
+        return self.create_prescription(prescription)
