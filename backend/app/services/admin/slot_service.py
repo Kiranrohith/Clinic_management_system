@@ -138,6 +138,19 @@ class AdminSlotService:
         slot = self.slot_repo.get_slot_by_id(slot_id)
         if slot is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found.")
+        appointment_count = self.slot_repo.count_appointments_for_slot(slot_id)
+        if appointment_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Slot {slot_id} ({slot.slot_start_time}-{slot.slot_end_time}) has "
+                    f"{appointment_count} patient appointment(s) booked and cannot be deleted."
+                ),
+            )
+        # No patient has booked this slot with any doctor, so it is safe to clear any
+        # doctor-marked availability for it and remove the slot itself. Running slot
+        # generation again will recreate it from the clinic schedule if still applicable.
+        self.slot_repo.delete_availabilities_for_slot(slot_id)
         self.slot_repo.delete_slot(slot)
 
     def generate_slots(self) -> list[SlotResponse]:

@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, aliased
 
 from app.models.appointment import Appointment, WaitingList
+from app.models.clinic import ClinicSetting
 from app.models.enums import AppointmentStatus, SlotStatus, WaitingStatus
 from app.models.patient import Patient
 from app.models.schedule import DoctorAvailability, Slot
@@ -50,6 +51,10 @@ class FrontdeskAppointmentRepository:
 
     def get_appointment_by_availability_id(self, availability_id: int) -> Appointment | None:
         stmt = select(Appointment).where(Appointment.availability_id == availability_id)
+        return self.db.execute(stmt).scalar_one_or_none()
+
+    def get_clinic_settings(self) -> ClinicSetting | None:
+        stmt = select(ClinicSetting).where(ClinicSetting.id == 1)
         return self.db.execute(stmt).scalar_one_or_none()
 
     def get_appointment_for_update(self, appointment_id: int) -> Appointment | None:
