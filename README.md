@@ -1086,25 +1086,3 @@ The system separates responsibilities between Admin, Front Desk, and Doctor role
 
 It combines traditional CRUD-based hospital management with real-time communication through SSE and automated scheduling workflows.
 
-````
-
-### A small README recommendation
-
-For GitHub, I'd put these sections **near the top**, before the detailed workflow:
-
-```
-1. Project Title
-2. Short Description
-3. Screenshots / Demo
-4. Features
-5. Architecture
-6. Tech Stack
-7. Role-Based Modules
-8. Main Workflows
-9. Database
-10. Project Structure
-11. Setup & Installation
-12. API Documentation
-13. Future Improvements
-````
-
